@@ -27,8 +27,10 @@ def addNewInstruction(instruction):
 
 def write_instructions_to_file():
     global instructions
+    i=0
     for instruction in instructions:
-      print(instruction)
+      print(i,instruction)
+      i+=1
 
 def Program():
   global fi
@@ -115,6 +117,12 @@ def statement():
 
     if sc.__CURRENT_TOKEN__ == ["keyword","if"]:
       if_statement()
+    if sc.__CURRENT_TOKEN__ == ["keyword","while"]:
+      while_stat()
+    if sc.__CURRENT_TOKEN__ == ["keyword","do"]:
+      do_while_stat()
+    if sc.__CURRENT_TOKEN__ == ["keyword","repeat"]:
+      repeat_stat()
     #so far identifier is only found at the begining of asignments or array idexing
     if sc.__CURRENT_TOKEN__[0] == "identifier":
       lhs = sc.__CURRENT_TOKEN__[1]#save the identifier name
@@ -132,6 +140,7 @@ def statement():
 
 
 def if_statement():
+  global ip
   match(["keyword","if"])
   Lexp() #first we must evaluate the logical expression
          #when the expression is evaluated the result will be at the top of the stack
@@ -159,6 +168,62 @@ def if_statement():
      #if there is no else the program can continue executing
      #from the current instruction 
      instructions[hole1][1] = ip
+
+def while_stat():
+  global ip
+
+  match(["keyword","while"])
+
+  #we have to excute the condition severa times
+  #so let's save that memory location so we can jmp to later
+  conditionaddress = ip
+  #next we can parse and generate the code for the condition
+  Lexp()
+
+  #if the condition is not true we would like to
+  #jump to the end of the while statement so we must save
+  #we don't know where to jump yet so save the pointer to add it ater
+  hole1 = ip  
+  addNewInstruction(["jfalse",""])
+  match(["keyword","do"])
+  statement()
+  #add jump to begening
+  addNewInstruction(["jmp",conditionaddress])
+  #patch hole1
+  instructions[hole1][1] = ip
+
+def do_while_stat():
+  global ip
+
+  match(["keyword","do"])
+  beginaddress = ip
+  statement()
+  match(["keyword","while"])
+  Lexp()
+  addNewInstruction(["jtrue",beginaddress])
+  match(["semicolon",";"])
+
+
+def repeat_stat():
+  global ip
+
+  match(["keyword","repeat"])
+  beginaddress = ip
+
+  #parse multiple satements until token until is found
+  while True:
+    if sc.__CURRENT_TOKEN__ == ["keyword","until"]:
+      break
+
+    statement()
+
+  match(["keyword","until"])
+
+  Lexp()
+
+  addNewInstruction(["jfalse",beginaddress])
+
+  match(["semicolon",";"])
 
 
 
