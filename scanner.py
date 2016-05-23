@@ -263,6 +263,10 @@ def state_action_twocharsymb(character):
             __CURRENT_STATE__ = "initial"
             __CURRENT_TOKEN_NAME__ = ""
             return ["colon",":"]
+       elif __CURRENT_TOKEN_NAME__ == ".":
+            __CURRENT_STATE__ = "initial"
+            __CURRENT_TOKEN_NAME__ = ""
+            return ["dot","."]
 
 def state_action_error(character):
     return ["invalidtoken",""]

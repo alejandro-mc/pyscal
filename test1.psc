@@ -28,15 +28,19 @@ while a > 2 do
 do a := a+1;
 while a < 100 ;}
 
-{test repeat until}
-{a:=3;
-repeat 
-a:= a + 1;
-until 2 > 1 ;}
+{factorial program}
+a:=10;
+b:=1;
+repeat
+begin 
+b:= b * a;
+a:= a - 1;
+end;
+until a < 1 ;
 
 {for loop test}
-a := 0;
+{a := 0;
 for z := 1 to 100 do
-	a := 1;
+	a := a + 1;}
 
-ENDPROG
+END.

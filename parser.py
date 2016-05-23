@@ -3,6 +3,7 @@
 
 import scanner as sc
 import sys
+import pickle
 
 #try parsing test file
 
@@ -15,7 +16,6 @@ ip =0             #instruction pointer for now it's going to hold the index of t
                   #in the instruction list
 instructions = [] #this instruction list is temporary eventually should write directly to bin
 
-
 def addNewInstruction(instruction):
     '''
     instruction is of the form ["operation","parameter"]
@@ -27,10 +27,14 @@ def addNewInstruction(instruction):
 
 def write_instructions_to_file():
     global instructions
-    i=0
-    for instruction in instructions:
-      print(i,instruction)
-      i+=1
+    #i=0
+    #for instruction in instructions:
+    #  print(i,instruction)
+    #  i+=1
+    for var in symbtab:
+        instructions.append(var['value'])
+    with open('executable','wb') as ex:
+         pickle.dump(instructions,ex)
 
 def Program():
   global fi
@@ -47,7 +51,8 @@ def Program():
     match(["keyword","begin"])#program begins
     #import pdb; pdb.set_trace()
     statements()
-    match(["keyword","endprog"])#program ends
+    match(["keyword","end"])#program ends
+    match(["dot","."])
     addNewInstruction(["halt",""])#produce opcode to halt the program
     write_instructions_to_file()
 
@@ -72,7 +77,7 @@ def var_declarations():
                              "value": 0,
                              "address": next_address}
         symbtab.append(new_symbtab_entry)
-        next_address += 4
+        next_address += 1
         match(["identifier",""])
       #import pdb; pdb.set_trace()
       if sc.__CURRENT_TOKEN__ == ["comma",","]:
@@ -100,31 +105,31 @@ def var_declarations():
     var_declarations()
 
 def begin():
-  if sc.__CURRENT_TOKEN__ == ["keyword","begin"]:
     match(["keyword","begin"])
-    while sc.__CURRENT_TOKEN__ != ["keyword","end"]:
-      statements()
+    statements()
+    match(["keyword","end"])
+    match(["semicolon",";"])
 
 
 def statements():
-  while True:
-      statement()
-      if sc.__CURRENT_TOKEN__ == ["keyword","endprog"]:
-        return
+    while sc.__CURRENT_TOKEN__ != ["keyword","end"]:
+          statement()
 
 def statement():
     global lhs
 
     if sc.__CURRENT_TOKEN__ == ["keyword","if"]:
-      if_statement()
+       if_statement()
     if sc.__CURRENT_TOKEN__ == ["keyword","while"]:
-      while_stat()
+       while_stat()
     if sc.__CURRENT_TOKEN__ == ["keyword","do"]:
-      do_while_stat()
+       do_while_stat()
     if sc.__CURRENT_TOKEN__ == ["keyword","repeat"]:
-      repeat_stat()
+       repeat_stat()
     if sc.__CURRENT_TOKEN__ == ["keyword","for"]:
        fordo_stat()
+    if sc.__CURRENT_TOKEN__ == ["keyword","begin"]:
+       begin()
     #so far identifier is only found at the begining of asignments or array idexing
     if sc.__CURRENT_TOKEN__[0] == "identifier":
       lhs = sc.__CURRENT_TOKEN__[1]#save the identifier name
@@ -243,7 +248,7 @@ def fordo_stat():
                             "value": 0,
                             "address": next_address}
        symbtab.append(new_symbtab_entry)
-       next_address += 4
+       next_address += 1
        match(["identifier",""])
     else:
        print("Error parsing for statement. Expected identifier")
@@ -252,7 +257,7 @@ def fordo_stat():
 
     if sc.__CURRENT_TOKEN__[0] == "unsigned int":
        #assigm value 
-       addNewInstruction(["pushi",sc.__CURRENT_TOKEN__[1]])
+       addNewInstruction(["pushi",int(sc.__CURRENT_TOKEN__[1])])
        addNewInstruction(["pop",control_var_address])
 
     match(["unsigned int",""])#may fail
@@ -260,13 +265,13 @@ def fordo_stat():
 
     if sc.__CURRENT_TOKEN__[0] == "unsigned int":
        #save the value
-       rangelimit = sc.__CURRENT_TOKEN__[1]
+       rangelimit = int(sc.__CURRENT_TOKEN__[1])
 
     #test condtition
     condition_address = ip
-    addNewInstruction(["pushi",rangelimit])
     addNewInstruction(["push",control_var_address])
-    addNewInstruction(["geq",""])
+    addNewInstruction(["pushi",rangelimit])
+    addNewInstruction(["leq",""])
 
     hole1 = ip
     addNewInstruction(["jfalse",""])
@@ -286,6 +291,9 @@ def fordo_stat():
 
     #patch hole
     instructions[hole1][1] = ip
+
+
+
 
 
 
@@ -317,7 +325,7 @@ def Lprime():
     elif sc.__CURRENT_TOKEN__ == ["opgreater",">"]:
        match(["opgreater",">"])
        Exp()
-       addNewInstruction(["greater",""])
+       addNewInstruction(["gtr",""])
        Lprime()
     elif sc.__CURRENT_TOKEN__ == ["opeq","="]:
        match(["opeq","="])
@@ -335,12 +343,12 @@ def Eprime():
     if sc.__CURRENT_TOKEN__ == ["opplus","+"]:
        match(["opplus","+"])
        Term()
-       addNewInstruction(["opadd",""])
+       addNewInstruction(["add",""])
        Eprime()
     elif sc.__CURRENT_TOKEN__ == ["opminus","-"]:
-       mathc(["opminus","-"])
+       match(["opminus","-"])
        Term()
-       addNewInstruction(["opsub",""])
+       addNewInstruction(["sub",""])
        Eprime()
  
 def Term():
@@ -351,12 +359,12 @@ def Tprime():
     if sc.__CURRENT_TOKEN__ == ["opmul","*"]:
        match(["opmul","*"])
        Fact()
-       addNewInstruction(["opmul",""])
+       addNewInstruction(["mul",""])
        Tprime()
     elif sc.__CURRENT_TOKEN__ == ["keyword","div"]:
        match(["keyword","div"])
        Fact()
-       addNewInstruction(["opdiv",""])
+       addNewInstruction(["div",""])
        Tprime()
 
 def Fact():
@@ -374,13 +382,13 @@ def Id():
     addNewInstruction(opstring)  
 
 def Lit():#only numerical literals for now
-    oppair = ["pushi" , sc.__CURRENT_TOKEN__[1]]
+    oppair = ["pushi" , int(sc.__CURRENT_TOKEN__[1])]
     addNewInstruction(oppair)
 
 def match(token):
     global fi
 
-    if token == ["keyword","endprog"]:
+    if token == ["dot","."]:
       if sc.__CURRENT_TOKEN__ == token:
         return
       else:
