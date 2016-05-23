@@ -123,6 +123,8 @@ def statement():
       do_while_stat()
     if sc.__CURRENT_TOKEN__ == ["keyword","repeat"]:
       repeat_stat()
+    if sc.__CURRENT_TOKEN__ == ["keyword","for"]:
+       fordo_stat()
     #so far identifier is only found at the begining of asignments or array idexing
     if sc.__CURRENT_TOKEN__[0] == "identifier":
       lhs = sc.__CURRENT_TOKEN__[1]#save the identifier name
@@ -226,6 +228,67 @@ def repeat_stat():
   match(["semicolon",";"])
 
 
+# for <identifier> := <integer literal> to <integer literal> do <statement> ;
+def fordo_stat():
+    global next_address
+    global ip
+
+    match(["keyword","for"])
+    #import pdb; pdb.set_trace()
+    if sc.__CURRENT_TOKEN__[0] == "identifier":
+       #add identifier to the symbol table
+       control_var_address = next_address#save address to insert value later
+       new_symbtab_entry = {"name" : sc.__CURRENT_TOKEN__[1],
+                            "type" : "empty",
+                            "value": 0,
+                            "address": next_address}
+       symbtab.append(new_symbtab_entry)
+       next_address += 4
+       match(["identifier",""])
+    else:
+       print("Error parsing for statement. Expected identifier")
+
+    match(["opassign",":="])#may fail
+
+    if sc.__CURRENT_TOKEN__[0] == "unsigned int":
+       #assigm value 
+       addNewInstruction(["pushi",sc.__CURRENT_TOKEN__[1]])
+       addNewInstruction(["pop",control_var_address])
+
+    match(["unsigned int",""])#may fail
+    match(["keyword","to"])
+
+    if sc.__CURRENT_TOKEN__[0] == "unsigned int":
+       #save the value
+       rangelimit = sc.__CURRENT_TOKEN__[1]
+
+    #test condtition
+    condition_address = ip
+    addNewInstruction(["pushi",rangelimit])
+    addNewInstruction(["push",control_var_address])
+    addNewInstruction(["geq",""])
+
+    hole1 = ip
+    addNewInstruction(["jfalse",""])
+
+    match(["unsigned int",""])
+    match(["keyword","do"])
+
+    #statements
+    statement()
+
+    #increment variable and return to begining
+    addNewInstruction(["pushi",1])
+    addNewInstruction(["push",control_var_address])
+    addNewInstruction(["add",""])
+    addNewInstruction(["pop",control_var_address])
+    addNewInstruction(["jmp",condition_address])
+
+    #patch hole
+    instructions[hole1][1] = ip
+
+
+
 
     
 ######################
@@ -326,7 +389,9 @@ def match(token):
     if token[0] == "identifier" and sc.__CURRENT_TOKEN__[0] == "identifier":
       sc.get_token(fi)
       return
-
+    if token[0] == "unsigned int" and sc.__CURRENT_TOKEN__[0] == "unsigned int":
+       sc.get_token(fi)
+       return
     if sc.__CURRENT_TOKEN__ != token:
        print("an error occured")
        return

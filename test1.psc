@@ -23,20 +23,20 @@ while a > 2 do
       a:= a + 1;} 
 
 {test do while}
-a:=1;
+{a:=1;
 
 do a := a+1;
-while a < 100 ;
+while a < 100 ;}
 
 {test repeat until}
 {a:=3;
-
 repeat 
 a:= a + 1;
-until 2 > 1 ;
+until 2 > 1 ;}
 
-a := a+1;}
-
-
+{for loop test}
+a := 0;
+for z := 1 to 100 do
+	a := 1;
 
 ENDPROG
