@@ -113,6 +113,10 @@ def state_action_initial(character):
          return ["leftparen", "("]
     elif character == ")":
          return ["rightparen",")"]
+    elif character == "[":
+         return ["leftbracket", "["]
+    elif character == "]":
+         return ["rightbracket","]"]
     elif character == "+":
          return ["opplus","+"]
     elif character == "-":
@@ -239,6 +243,7 @@ def state_action_twocharsymb(character):
 
     elif character == ".":
          if __CURRENT_TOKEN_NAME__ == ".":
+            __CURRENT_STATE__      = "initial"
             __CURRENT_TOKEN_NAME__ = ""
             return ["oprange",".."]
          else:

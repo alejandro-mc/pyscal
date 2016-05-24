@@ -102,6 +102,28 @@ def pop():
 	program[memaddress + static] = stack.pop()
 	ip+=1
 
+def put():
+    global stack
+    global ip
+    global program
+    global static
+
+    value      = stack.pop()
+    memaddress = stack.pop() 
+    program[memaddress + static] = value
+    ip+=1
+
+def emit():
+    global stack
+    global ip
+    global program
+    global static
+
+    memaddress = stack.pop() 
+    stack.append(program[memaddress + static])
+    ip+=1
+
+
 
 def jmp():
 	global stack
@@ -149,6 +171,8 @@ executeInstruction = {
 'push'   : push,
 'pushi'  : pushi,
 'pop'    : pop,
+'put'    : put,
+'emit'   : emit,
 'jmp'    : jmp,
 'jfalse' : jfalse,
 'jtrue'  : jtrue	

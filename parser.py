@@ -32,7 +32,11 @@ def write_instructions_to_file():
     #  print(i,instruction)
     #  i+=1
     for var in symbtab:
-        instructions.append(var['value'])
+        if var['type'] == "array":
+           for i in range(var['lo'],var['hi'] + 1):
+               instructions.append(var['value'])
+        if var['type'] == "integer":
+           instructions.append(var['value'])
     with open('executable','wb') as ex:
          pickle.dump(instructions,ex)
 
@@ -48,8 +52,8 @@ def Program():
     #import pdb; pdb.set_trace()
     match(["semicolon",";"])
     declarations()
-    match(["keyword","begin"])#program begins
     #import pdb; pdb.set_trace()
+    match(["keyword","begin"])#program begins
     statements()
     match(["keyword","end"])#program ends
     match(["dot","."])
@@ -61,6 +65,9 @@ def declarations():
 
 def var_declarations():
     global next_address
+    global symbtab
+
+    tmpsymbtab =[]
     #import pdb; pdb.set_trace()
     if sc.__CURRENT_TOKEN__ == ["keyword","var"]:
       match(["keyword","var"])
@@ -75,9 +82,9 @@ def var_declarations():
         new_symbtab_entry = {"name" : sc.__CURRENT_TOKEN__[1],
                              "type" : "empty",
                              "value": 0,
-                             "address": next_address}
-        symbtab.append(new_symbtab_entry)
-        next_address += 1
+                             "address": 0}#we don't know what type it is so don't know
+                                          #the address either
+        tmpsymbtab.append(new_symbtab_entry)
         match(["identifier",""])
       #import pdb; pdb.set_trace()
       if sc.__CURRENT_TOKEN__ == ["comma",","]:
@@ -89,18 +96,49 @@ def var_declarations():
     
     #add integer variable types
     if sc.__CURRENT_TOKEN__ == ["keyword","integer"]:
-      for entry in symbtab:
+      for entry in tmpsymbtab:
         if entry['type'] == 'empty':
           entry['type'] = 'integer'
+          entry['address'] = next_address
+          next_address +=1
       match(["keyword","integer"])
     #add real varable types
     if sc.__CURRENT_TOKEN__ == ["keyword","real"]:
-      for entry in symbtab:
+      for entry in tmpsymbtab:
         if entry['type'] == 'empty':
-          entry['type'] = 'real'
+           entry['type'] = 'real'
+    #add array types
+    lo  = 0
+    hi  = 0
+    if sc.__CURRENT_TOKEN__ == ["keyword","array"]:
+       match(["keyword","array"])
+       match(["leftbracket", "["])
+       if sc.__CURRENT_TOKEN__[0] == "unsigned int":
+          lo = int(sc.__CURRENT_TOKEN__[1])
+          match(["unsigned int",""])
 
-    if sc.__CURRENT_TOKEN__ == ["semicolon",";"]:
-      match(["semicolon",";"])
+       match(["oprange",".."])
+       if sc.__CURRENT_TOKEN__[0] == "unsigned int":
+          hi = int(sc.__CURRENT_TOKEN__[1])
+          match(["unsigned int",""])
+       #import pdb;pdb.set_trace()
+       match(["rightbracket", "]"])
+
+       match(["keyword","of"])
+
+       if sc.__CURRENT_TOKEN__ == ["keyword","integer"]:
+          for entry in tmpsymbtab:
+              entry['type']         = "array"
+              entry['element_type'] = "integer"
+              entry['lo']           = lo
+              entry['hi']           = hi
+              entry['address']      = next_address
+              next_address = next_address + (hi -  lo + 1)
+          match(["keyword","integer"])
+    
+    match(["semicolon",";"])
+
+    symbtab = symbtab + tmpsymbtab
 
     var_declarations()
 
@@ -132,18 +170,47 @@ def statement():
        begin()
     #so far identifier is only found at the begining of asignments or array idexing
     if sc.__CURRENT_TOKEN__[0] == "identifier":
-      lhs = sc.__CURRENT_TOKEN__[1]#save the identifier name
-      match(["identifier",""])
-      if sc.__CURRENT_TOKEN__ == ["opassign",":="]:
-        match(["opassign",":="])
-        Lexp()
 
-        #after the code produced by Exp is evaluated
-        #we must put the result from the top of the stack
-        #in the correct mem location
-        opstring = ["pop" , list(filter(lambda x: x['name'] == lhs,symbtab))[0]['address']]
-        addNewInstruction(opstring)
-        match(["semicolon",";"])
+       lhs = sc.__CURRENT_TOKEN__[1]#save the identifier name
+       match(["identifier",""])
+       symbtab_entry = list(filter(lambda x: x['name'] == lhs, symbtab))[0]
+       identifiertype = symbtab_entry['type']
+       if identifiertype == 'array':
+          match(["leftbracket","["])
+          Exp()
+          match(["rightbracket","]"])
+
+       if sc.__CURRENT_TOKEN__ == ["opassign",":="]:
+          match(["opassign",":="])
+          if identifiertype == 'array':
+             #normalize
+             addNewInstruction(["pushi",symbtab_entry['lo']])
+             addNewInstruction(["sub",""])
+
+             #compute offset not needed for our stack machine 
+             #we don't multiply here because integer takes one
+             #memory address in our stack machine
+
+             #compute address
+             addNewInstruction(["pushi",symbtab_entry['address']])
+             addNewInstruction(["add",""])
+
+             #now the address is at the top of the stack
+
+          Lexp()
+
+          #after the code produced by Exp is evaluated
+          #we must put the result from the top of the stack
+          #in the correct mem location
+          if identifiertype == 'array':
+             #at this point the value of Lexp will be
+             #at the top of the stack
+             #and the address will be below
+             addNewInstruction(["put",""])#puts the value in the mem address
+          else:
+             addNewInstruction(["pop" , symbtab_entry['address']])
+
+          match(["semicolon",";"])
 
 
 def if_statement():
@@ -244,7 +311,7 @@ def fordo_stat():
        #add identifier to the symbol table
        control_var_address = next_address#save address to insert value later
        new_symbtab_entry = {"name" : sc.__CURRENT_TOKEN__[1],
-                            "type" : "empty",
+                            "type" : "integer",
                             "value": 0,
                             "address": next_address}
        symbtab.append(new_symbtab_entry)
@@ -368,12 +435,36 @@ def Tprime():
        Tprime()
 
 def Fact():
+    global symbtab
     if sc.__CURRENT_TOKEN__[0] == "identifier":
-       Id()
-       match(sc.__CURRENT_TOKEN__) 
+       symbtab_entry = list(filter(lambda x: x['name'] == sc.__CURRENT_TOKEN__[1], symbtab))[0]
+       identifiertype = symbtab_entry['type']
+       if identifiertype == 'array':
+          arrayvar(symbtab_entry)
+       else:
+        Id()
+        match(sc.__CURRENT_TOKEN__) 
     elif sc.__CURRENT_TOKEN__[0] == "unsigned int":
        Lit()#will push int literal to stack
        match(sc.__CURRENT_TOKEN__)
+
+def arrayvar(entry):
+    match(sc.__CURRENT_TOKEN__)#current token will be the variable name
+    match(["leftbracket","["])
+    Exp()
+    match(["rightbracket","]"])
+
+    #normalize
+    addNewInstruction(["pushi",entry['lo']])
+    addNewInstruction(["sub",""])
+
+    #compute address
+    addNewInstruction(["pushi",entry['address']])
+    addNewInstruction(["add",""])
+
+    #put value on the stack
+    addNewInstruction(["emit",""])
+
 
 def Id():
     #lookup identifier in the symbol table
