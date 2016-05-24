@@ -52,7 +52,7 @@ def gtr():
 	global ip
 	b = stack.pop()
 	a = stack.pop()
-	stack.append(a >= b)
+	stack.append(a > b)
 	ip+=1
 
 
@@ -156,7 +156,8 @@ def jtrue():
 	else:
 	   ip+=1
 
-
+def noop():
+	return
 
 #instruction dispatcher
 executeInstruction = {
@@ -175,7 +176,8 @@ executeInstruction = {
 'emit'   : emit,
 'jmp'    : jmp,
 'jfalse' : jfalse,
-'jtrue'  : jtrue	
+'jtrue'  : jtrue,
+'noop'	 : noop
 }
 
 
@@ -196,9 +198,14 @@ def main():
 
 	#import pdb; pdb.set_trace()
 	#execute the program
+	#print("~~~~~~~~~~~~~~~Executable~~~~~~~~~~~~~~~")
+	#for i in program:
+	#	print(i)
+	#return
 	while program[ip][0] != 'halt':
 		  #execute instruction
 		  executeInstruction[program[ip][0]]()
+		  #import pdb; pdb.set_trace()
 
 
 	#at the end print the stack

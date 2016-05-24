@@ -158,16 +158,22 @@ def statement():
 
     if sc.__CURRENT_TOKEN__ == ["keyword","if"]:
        if_statement()
+       return
     if sc.__CURRENT_TOKEN__ == ["keyword","while"]:
        while_stat()
+       return
     if sc.__CURRENT_TOKEN__ == ["keyword","do"]:
        do_while_stat()
+       return
     if sc.__CURRENT_TOKEN__ == ["keyword","repeat"]:
        repeat_stat()
+       return
     if sc.__CURRENT_TOKEN__ == ["keyword","for"]:
        fordo_stat()
+       return
     if sc.__CURRENT_TOKEN__ == ["keyword","begin"]:
        begin()
+       return
     #so far identifier is only found at the begining of asignments or array idexing
     if sc.__CURRENT_TOKEN__[0] == "identifier":
 
@@ -245,7 +251,7 @@ def if_statement():
 
 def while_stat():
   global ip
-
+  global instructions
   match(["keyword","while"])
 
   #we have to excute the condition severa times
@@ -260,6 +266,7 @@ def while_stat():
   hole1 = ip  
   addNewInstruction(["jfalse",""])
   match(["keyword","do"])
+  #import pdb; pdb.set_trace()
   statement()
   #add jump to begening
   addNewInstruction(["jmp",conditionaddress])
@@ -399,7 +406,17 @@ def Lprime():
        Exp()
        addNewInstruction(["eq",""])
        Lprime()
-    #must add the other cases later
+    elif sc.__CURRENT_TOKEN__ == ["opleq","<="]:
+       match(["opleq","<="])
+       Exp()
+       addNewInstruction(["leq",""])
+       Lprime()
+    elif sc.__CURRENT_TOKEN__ == ["opgeq",">="]:
+       match(["opgeq",">="])
+       Exp()
+       addNewInstruction(["geq",""])
+       Lprime()
+    
 
 
 def Exp():
